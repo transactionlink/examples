@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Transactionlink embed in plain HTML</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <main>
+            <h1>Your website</h1>
+            <p>
+                <strong>Fully Customizable Triggering.</strong> You have complete
+                control over when and how the Transactionlink widget appears. It can be
+                triggered by a button click, a specific event in your app, or any other
+                condition that fits your scenario.
+            </p>
+
+            <h2>Transactionlink widget will show below</h2>
+
+            <!-- Button to trigger the widget -->
+            <button id="launch-widget">Launch Embedded Widget</button>
+
+            <transactionlink-widget />
+        </main>
+
+        <script type="module">
+            let transactionLinkReady = false;
+
+            function createWorkflowExecution() {
+                // Create workflow execution to obtain ID and token
+                // Note that a call to Transactionlink API  needs to happen server-side
+                // so that you don't expose your credentials in public
+                return fetch('http://localhost:8101/create-workflow-execution-embedded', { method: 'POST' })
+                    .then((response) => response.json())
+                    .catch((err) => {
+                        console.error(err);
+                    });
+            }
+
+            function isWorkflowFinished(workflowId) {
+                return fetch(`http://localhost:8101/workflow-status?workflowId=${workflowId}`)
+                    .then((response) => response.json())
+                    .then((data) => data.status === 'COMPLETED')
+                    .catch((err) => {
+                        console.error(err);
+                        return false;
+                    });
+            }
+
+            async function launchWidget() {
+                const { workflowId, token } = await createWorkflowExecution();
+
+                if (!transactionLinkReady) {
+                    window.transactionlink_ready = async () => {
+                        transactionLinkReady = true;
+                        await openWidget(workflowId, token);
+                    };
+
+                    const script = document.createElement('script');
+                    script.src =
+                        'https://widget.transactionlink.io/transactionlink-widget.umd.js';
+                    document.head.appendChild(script);
+                } else {
+                    await openWidget(workflowId, token);
+                }
+            }
+
+            async function openWidget(workflowId, token) {
+                window.transactionlink.setOptions({ token });
+                window.transactionlink.open();
+
+                let finished = false;
+                // Wait until workflow is finished - ask the server for status periodically
+                while (!finished) {
+                    // Wait 2s between calls
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+                    finished = await isWorkflowFinished(workflowId);
+                }
+
+                // Close widget when workflow is finished
+                window.transactionlink.close();
+            }
+
+            // Get the button element
+            const addButton = document.getElementById('launch-widget');
+
+            // Add a click event listener to the button
+            addButton.addEventListener('click', launchWidget);
+        </script>
+    </body>
+</html>
