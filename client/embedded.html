@@ -31,7 +31,7 @@
                 // Create workflow execution to obtain ID and token
                 // Note that a call to Transactionlink API  needs to happen server-side
                 // so that you don't expose your credentials in public
-                return fetch('http://localhost:8101/create-workflow-execution-embedded', { method: 'POST' })
+                return fetch('http://localhost:8101/workflow-execution', { method: 'POST' })
                     .then((response) => response.json())
                     .catch((err) => {
                         console.error(err);

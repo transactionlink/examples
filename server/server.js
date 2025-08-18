@@ -22,8 +22,8 @@ const WORKFLOW_DEFINITION_ID = '[your workflow definition id]' // TODO put your 
 const PORT = process.env.PORT || 8101 // Port for the server
 const API_HOST = 'https://api.transactionlink.io' // API host for TransactionLink
 
-async function getToken() {
-    const token = await axios.post(`${API_HOST}/auth/authorize`, {
+async function authorize() {
+    const response = await axios.post(`${API_HOST}/auth/authorize`, {
         key: WIDGET_API_KEY,
         secret: WIDGET_SECRET_KEY,
     }, {
@@ -33,17 +33,15 @@ async function getToken() {
         },
     })
 
-    console.log('Token received:', token.data.accessToken)
-    return token.data.accessToken
+    console.log('Access token received:', response.data.accessToken)
+    return response.data.accessToken
 }
 
-async function createWorkflowExecution(uiMode) {
+app.post('/workflow-execution', async (req, res) => {
     const executionPayload = {
         recordId: uuid.v4(),
         workflowDefinitionId: WORKFLOW_DEFINITION_ID,
-        parametersId: uuid.v4(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        uiMode,
         locale: 'en',
     }
 
@@ -52,29 +50,18 @@ async function createWorkflowExecution(uiMode) {
         executionPayload,
         {
             headers: {
-                Authorization: `Bearer ${await getToken()}`,
+                Authorization: `Bearer ${await authorize()}`,
                 'Content-Type': 'application/json',
             },
         },
     )
 
     console.log('Workflow execution created:', execution.data)
-    return execution.data
-}
 
-app.post('/create-workflow-execution-hosted', async (req, res) => {
-    const execution = await createWorkflowExecution('hosted')
     res.send({
-        link: execution.link,
-        workflowId: execution.id,
-    })
-})
-
-app.post('/create-workflow-execution-embedded', async (req, res) => {
-    const execution = await createWorkflowExecution('embedded')
-    res.send({
-        token: execution.token,
-        workflowId: execution.id,
+        link: execution.data.link,
+        token: execution.data.token,
+        workflowId: execution.data.id,
     })
 })
 
@@ -85,7 +72,7 @@ app.get('/workflow-status', async (req, res) => {
         `${API_HOST}/workflows/${workflowId}`,
         {
             headers: {
-                Authorization: `Bearer ${await getToken()}`,
+                Authorization: `Bearer ${await authorize()}`,
             },
         },
     )

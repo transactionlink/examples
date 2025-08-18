@@ -27,7 +27,7 @@
                 // Create workflow execution to obtain redirection link
                 // Note that a call to Transactionlink API  needs to happen server-side
                 // so that you don't expose your credentials in public
-                fetch('http://localhost:8101/create-workflow-execution-hosted', { method: 'POST' })
+                fetch('http://localhost:8101/workflow-execution', { method: 'POST' })
                     .then((response) => response.json())
                     .then((data) => {
                         window.location = data.link;
