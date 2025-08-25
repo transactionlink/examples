@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Transactionlink redirect in plain HTML</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <main>
+            <h1>Your website</h1>
+            <p>
+                <strong>Fully Customizable Triggering.</strong> You have complete
+                control over when and how the Transactionlink widget appears. It can be
+                triggered by a button click, a specific event in your app, or any other
+                condition that fits your scenario.
+            </p>
+
+            <h2>Trigger Transactionlink widget below</h2>
+
+            <!-- Button to trigger the widget -->
+            <button id="open-widget">Redirect to Widget</button>
+        </main>
+
+        <script type="module">
+            function redirectToWidget() {
+                // Create workflow execution to obtain redirection link
+                // Note that a call to Transactionlink API  needs to happen server-side
+                // so that you don't expose your credentials in public
+                fetch('http://localhost:8101/workflow-execution', { method: 'POST' })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        window.location = data.link;
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                    });
+            }
+
+            // Get the button element
+            const addButton = document.getElementById('open-widget');
+
+            // Add a click event listener to the button
+            addButton.addEventListener('click', redirectToWidget);
+        </script>
+    </body>
+</html>

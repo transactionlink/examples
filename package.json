@@ -1,0 +1,22 @@
+{
+    "name": "transactionlink-examples",
+    "version": "0.0.0",
+    "private": true,
+    "type": "commonjs",
+    "scripts": {
+        "run:backend": "PORT=8101 node server/server.js",
+        "run:frontend": "servor client index.html 8100 --reload",
+        "run": "concurrently \"yarn run:backend\" \"yarn run:frontend\""
+    },
+    "dependencies": {
+        "axios": "^1.11.0",
+        "concurrently": "^9.2.0",
+        "cors": "^2.8.5",
+        "express": "^4.21.2",
+        "servor": "^4.0.2",
+        "uuid": "^11.1.0"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.19"
+    }
+}
