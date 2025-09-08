@@ -1,0 +1,12 @@
+{
+    "name": "transactionlink-examples-client-vanilla",
+    "version": "0.0.0",
+    "private": true,
+    "type": "commonjs",
+    "scripts": {
+        "start": "servor . index.html 8100 --reload"
+    },
+    "dependencies": {
+        "servor": "^4.0.2"
+    }
+}
