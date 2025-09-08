@@ -18,6 +18,7 @@ const WORKFLOW_DEFINITION_ID = '[your workflow definition id]'; // put your work
 
 Example implementations:
 * [server/node](server/node/README.md) - Node.js backend
+* [server/python](server/python/README.md) - Python (flask) backend
 
 ## client
 
