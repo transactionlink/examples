@@ -76,7 +76,7 @@ class TransactionlinkRepository {
     }
 
     /**
-     * Extracts token from link like: https://link.staging.transactionlink.io?token=xyz
+     * Extracts token from link like: https://link.transactionlink.io?token=xyz
      */
     private fun extractTokenFromLink(link: String): String? {
         return try {

@@ -21,8 +21,8 @@ object Config {
     const val WORKFLOW_DEFINITION_ID = "your-workflow-id-here"
 
     // Base URLs
-    const val API_BASE_URL = "https://api.staging.transactionlink.io/"
-    const val WIDGET_BASE_URL = "https://widget.staging.transactionlink.io"
+    const val API_BASE_URL = "https://api.transactionlink.io/"
+    const val WIDGET_BASE_URL = "https://widget.transactionlink.io"
 
     // For local development, uncomment and modify:
     // const val WIDGET_BASE_URL = "http://192.168.1.100:3000"

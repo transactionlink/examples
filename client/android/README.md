@@ -16,8 +16,8 @@ object Config {
     const val API_SECRET = "[your widget secret key]"
     const val WORKFLOW_DEFINITION_ID = "[your workflow definition id]"
 
-    const val API_BASE_URL = "https://api.staging.transactionlink.io/"
-    const val WIDGET_BASE_URL = "https://widget.staging.transactionlink.io"
+    const val API_BASE_URL = "https://api.transactionlink.io/"
+    const val WIDGET_BASE_URL = "https://widget.transactionlink.io"
     const val LOCALE = "en"
 }
 ```
