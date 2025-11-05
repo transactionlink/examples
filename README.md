@@ -22,7 +22,12 @@ Example implementations:
 
 ## client
 
-Example implementations:
+Web client example implementations:
 * [client/vanilla](client/vanilla/README.md) - plain JavaScript frontend
 * [client/react](client/react/README.md) - React + TypeScript frontend
-* [client/android](client/android/README.md) - Android native app
+
+## mobile
+
+Mobile app example implementations:
+* [mobile/android](mobile/android/README.md) - Android native app (Kotlin + Jetpack Compose)
+* [mobile/react-native-expo](mobile/react-native-expo/README.md) - React Native Expo app (iOS & Android)
