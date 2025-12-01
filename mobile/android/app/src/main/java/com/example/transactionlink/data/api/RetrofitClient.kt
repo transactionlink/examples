@@ -7,6 +7,10 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+/**
+ * Retrofit client for backend server communication
+ * The backend server handles API secrets securely - they are never exposed to the mobile app
+ */
 object RetrofitClient {
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -21,10 +25,10 @@ object RetrofitClient {
         .build()
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl(Config.API_BASE_URL)
+        .baseUrl(Config.BACKEND_URL)
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-    val apiService: TransactionlinkApiService = retrofit.create(TransactionlinkApiService::class.java)
+    val apiService: BackendApiService = retrofit.create(BackendApiService::class.java)
 }

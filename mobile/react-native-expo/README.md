@@ -2,21 +2,55 @@
 
 See https://docs.transactionlink.io/ for full info.
 
-This is a React Native Expo integration example of Transactionlink widget. It demonstrates the minimal code needed to run Transactionlink widget in a WebView, including authentication and workflow execution.
+This is a React Native Expo integration example of Transactionlink widget. It demonstrates how to securely integrate the Transactionlink widget in a mobile app by using a backend server to handle API secrets.
 
 This example is similar to the Android native app but built with React Native Expo for cross-platform development (iOS & Android).
 
+## Architecture
+
+**IMPORTANT SECURITY NOTE:** This example follows security best practices by keeping API secrets on the backend server, not in the mobile app. The mobile app communicates with your backend, which handles authentication with Transactionlink API.
+
+### How it works:
+1. Mobile app calls your backend server's `/workflow-execution` endpoint
+2. Backend server authenticates with Transactionlink API using API credentials (stored securely on backend)
+3. Backend creates a workflow and returns the widget token to the mobile app
+4. Mobile app loads the widget using the token
+
+## Prerequisites
+
+This mobile app requires a backend server to handle API credentials securely:
+
+1. **Deploy the backend**: Choose `server/node/` or `server/python/` from this repository
+2. **Configure credentials**: Set your API credentials in the backend server
+3. **Deploy it**: Deploy to your hosting provider (e.g., Heroku, AWS, Google Cloud, etc.)
+4. **Get the URL**: Note your deployed backend URL
+
+### For local development only
+
+If you want to test locally before deploying:
+
+1. Navigate to `server/node/` or `server/python/`
+2. Follow setup instructions and configure API credentials
+3. Start the backend server locally (default: http://localhost:8101)
+4. Use platform-specific URLs in mobile app (see Configuration below)
+
 ## Configuration
 
-Before running, copy `.env.example` to `.env` and fill in your credentials:
+Copy `.env.example` to `.env` and configure your backend URL:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`
+Edit `.env` to set your deployed backend server URL:
+```env
+EXPO_PUBLIC_BACKEND_URL=https://your-backend-server.com
+```
 
-**Note:** In production environments, API credentials should be stored on a secure backend server, not in the mobile app. This example includes server-side logic (authentication and workflow creation) for demonstration purposes only.
+**For local development**, use platform-specific addresses:
+- **Android emulator**: `http://10.0.2.2:8101`
+- **iOS simulator**: `http://localhost:8101`
+- **Physical device**: `http://YOUR_LOCAL_IP:8101` (e.g., `http://192.168.1.100:8101`)
 
 ## Installation
 
@@ -80,28 +114,39 @@ The builds will be installed directly on your connected device or emulator.
 
 ## How it works
 
-1. App authenticates with Transactionlink API using credentials from `.env` file
-2. Creates a new workflow instance for the specified workflow definition
-3. Receives a widget token from the API response
-4. Loads the widget in a WebView using the token
+1. Mobile app calls backend server's `/workflow-execution` endpoint
+2. Backend server authenticates with Transactionlink API (credentials stored securely on backend)
+3. Backend creates a workflow and returns widget token to mobile app
+4. Mobile app loads the widget in a WebView using the token
 
 ## Testing E2E
 
 For end-to-end testing on actual devices:
 
-1. **Configure credentials** in `.env` file
-2. **Connect your device** or start emulator/simulator
-3. **Run build command:**
+1. **Deploy your backend** or run it locally (see Prerequisites)
+2. **Configure backend URL** in `.env` file
+3. **Connect your device** or start emulator/simulator
+4. **Run build command:**
    - Android: `npm run build:android`
    - iOS: `npm run build:ios`
-4. **Test the complete workflow** on device
+5. **Test the complete workflow** on device
 
 ## Troubleshooting
 
-### App shows "Authentication Failed"
-- Check your API credentials in `.env` file
+### App shows connection errors
+- Verify `EXPO_PUBLIC_BACKEND_URL` in `.env` points to your deployed backend
+- Ensure your backend server is running and accessible
+- Check that your backend URL uses HTTPS in production
+- For local development:
+  - Android emulator: Use `http://10.0.2.2:8101`
+  - iOS simulator: Use `http://localhost:8101`
+  - Physical device: Use your computer's local IP (e.g., `http://192.168.1.100:8101`)
+  - Ensure your local backend server is running
+
+### Widget shows authentication errors
+- Check API credentials in your deployed backend server
 - Verify your API key and secret are correct
-- Make sure you copied `.env.example` to `.env`
+- Check your backend server logs for authentication errors
 
 ### Build fails
 

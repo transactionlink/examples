@@ -1,20 +1,30 @@
 import axios, { AxiosInstance } from 'axios';
-import {
-  AuthRequest,
-  AuthResponse,
-  WorkflowRequest,
-  WorkflowResponse,
-  StoredAuth,
-} from '../types';
-import { StorageService } from './storage';
 
+interface WorkflowExecutionResponse {
+  link: string;
+  token: string;
+  workflowId: string;
+}
+
+/**
+ * API service that communicates with the backend server.
+ * The backend server handles API secrets securely - they are never exposed to the client.
+ */
 class TransactionlinkAPI {
   private client: AxiosInstance;
-  private authToken: string | null = null;
 
   constructor() {
+    const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+    if (!backendUrl) {
+      throw new Error(
+        'EXPO_PUBLIC_BACKEND_URL is not configured. ' +
+        'Please set it in your .env file to point to your deployed backend server.'
+      );
+    }
+
     this.client = axios.create({
-      baseURL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.transactionlink.io/',
+      baseURL: backendUrl,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -22,124 +32,43 @@ class TransactionlinkAPI {
   }
 
   /**
-   * Authenticate with API credentials
+   * Get widget token from backend server
+   * The backend handles authentication and workflow creation securely
    */
-  async authenticate(): Promise<AuthResponse> {
+  async getWidgetToken(parameters?: Record<string, any>): Promise<string> {
     try {
-      const authRequest: AuthRequest = {
-        key: process.env.EXPO_PUBLIC_API_KEY || '',
-        secret: process.env.EXPO_PUBLIC_API_SECRET || '',
-      };
-
-      const response = await this.client.post<AuthResponse>(
-        'auth/authorize',
-        authRequest
+      const response = await this.client.post<WorkflowExecutionResponse>(
+        '/workflow-execution',
+        parameters || {}
       );
 
-      this.authToken = response.data.accessToken;
+      const token = response.data.token;
 
-      // Calculate expiry time and save to secure storage
-      const expiresAt = Date.now() + response.data.expiryDuration * 1000;
-      const storedAuth: StoredAuth = {
-        accessToken: response.data.accessToken,
-        refreshToken: response.data.refreshToken,
-        expiresAt,
-      };
+      if (!token) {
+        throw new Error('No widget token received from backend');
+      }
 
-      await StorageService.saveAuth(storedAuth);
-
-      return response.data;
+      return token;
     } catch (error) {
-      console.error('Authentication failed:', error);
+      console.error('Failed to get widget token:', error);
       throw error;
     }
   }
 
   /**
-   * Get current auth token (from memory or storage)
+   * Check workflow status
    */
-  async getAuthToken(): Promise<string> {
-    if (this.authToken) {
-      return this.authToken;
-    }
-
-    const storedAuth = await StorageService.getAuth();
-    if (storedAuth) {
-      this.authToken = storedAuth.accessToken;
-      return storedAuth.accessToken;
-    }
-
-    // No valid token, need to authenticate
-    const authResponse = await this.authenticate();
-    return authResponse.accessToken;
-  }
-
-  /**
-   * Create and run a workflow
-   */
-  async runWorkflow(
-    workflowDefinitionId: string,
-    parameters?: Record<string, any>
-  ): Promise<WorkflowResponse> {
+  async getWorkflowStatus(workflowId: string): Promise<{ status: string; workflowId: string }> {
     try {
-      const token = await this.getAuthToken();
-
-      const workflowRequest: WorkflowRequest = {
-        workflowDefinitionId,
-        locale: process.env.EXPO_PUBLIC_LOCALE || 'en',
-        parameters: parameters || {},
-      };
-
-      const response = await this.client.post<WorkflowResponse>(
-        'workflows',
-        workflowRequest,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await this.client.get('/workflow-status', {
+        params: { workflowId },
+      });
 
       return response.data;
     } catch (error) {
-      console.error('Failed to run workflow:', error);
+      console.error('Failed to get workflow status:', error);
       throw error;
     }
-  }
-
-  /**
-   * Extract token from widget link
-   */
-  extractTokenFromLink(link: string): string | null {
-    try {
-      const url = new URL(link);
-      return url.searchParams.get('token');
-    } catch (error) {
-      console.error('Failed to extract token from link:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get widget token for a workflow
-   */
-  async getWidgetToken(
-    workflowDefinitionId?: string,
-    parameters?: Record<string, any>
-  ): Promise<string> {
-    const defId = workflowDefinitionId || process.env.EXPO_PUBLIC_WORKFLOW_DEFINITION_ID || '';
-    const workflowResponse = await this.runWorkflow(defId, parameters);
-
-    // Try to extract token from link first, fallback to direct token
-    const token =
-      this.extractTokenFromLink(workflowResponse.link) ||
-      workflowResponse.token;
-
-    if (!token) {
-      throw new Error('No widget token received from API');
-    }
-
-    return token;
   }
 }
 

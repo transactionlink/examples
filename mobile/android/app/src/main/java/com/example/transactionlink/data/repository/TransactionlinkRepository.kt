@@ -1,74 +1,30 @@
 package com.example.transactionlink.data.repository
 
 import android.util.Log
-import com.example.transactionlink.Config
 import com.example.transactionlink.data.api.RetrofitClient
-import com.example.transactionlink.data.models.AuthRequest
-import com.example.transactionlink.data.models.WorkflowRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Repository for communicating with the backend server
+ * The backend server handles API authentication securely - no secrets are stored in this app
+ */
 class TransactionlinkRepository {
 
-    private val apiService = RetrofitClient.apiService
-    private var cachedAccessToken: String? = null
+    private val backendService = RetrofitClient.apiService
 
     /**
-     * Authorizes with API and returns access token
+     * Gets widget token from backend server
+     * The backend handles authentication and workflow creation
      */
-    private suspend fun authorize(): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun getWidgetToken(parameters: Map<String, @JvmSuppressWildcards Any> = emptyMap()): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val authRequest = AuthRequest(
-                key = Config.API_KEY,
-                secret = Config.API_SECRET
-            )
-            val response = apiService.authorize(authRequest)
-            cachedAccessToken = response.accessToken
-            Log.d("TransactionlinkRepo", "Authorization successful")
-            Result.success(response.accessToken)
-        } catch (e: Exception) {
-            Log.e("TransactionlinkRepo", "Authorization failed", e)
-            Result.failure(e)
-        }
-    }
+            val response = backendService.createWorkflowExecution(parameters)
 
-    /**
-     * Runs workflow and returns widget token
-     */
-    suspend fun getWidgetToken(): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            // First, authorize
-            val authResult = authorize()
-            if (authResult.isFailure) {
-                return@withContext Result.failure(
-                    authResult.exceptionOrNull() ?: Exception("Authorization failed")
-                )
-            }
+            Log.d("TransactionlinkRepo", "Workflow created: ${response.workflowId}")
+            Log.d("TransactionlinkRepo", "Widget token received")
 
-            val accessToken = authResult.getOrNull() ?: return@withContext Result.failure(
-                Exception("Access token is null")
-            )
-
-            // Now run workflow
-            val workflowRequest = WorkflowRequest(
-                workflowDefinitionId = Config.WORKFLOW_DEFINITION_ID,
-                locale = Config.LOCALE,
-                parameters = emptyMap()
-            )
-
-            val workflowResponse = apiService.runWorkflow(
-                authorization = "Bearer $accessToken",
-                workflowRequest = workflowRequest
-            )
-
-            Log.d("TransactionlinkRepo", "Workflow started: ${workflowResponse.id}")
-            Log.d("TransactionlinkRepo", "Widget link: ${workflowResponse.link}")
-
-            // Extract token from link
-            val token = extractTokenFromLink(workflowResponse.link)
-                ?: workflowResponse.token
-
-            Result.success(token)
+            Result.success(response.token)
         } catch (e: Exception) {
             Log.e("TransactionlinkRepo", "Failed to get widget token", e)
             Result.failure(e)
@@ -76,15 +32,18 @@ class TransactionlinkRepository {
     }
 
     /**
-     * Extracts token from link like: https://link.transactionlink.io?token=xyz
+     * Gets workflow status from backend server
      */
-    private fun extractTokenFromLink(link: String): String? {
-        return try {
-            val uri = android.net.Uri.parse(link)
-            uri.getQueryParameter("token")
+    suspend fun getWorkflowStatus(workflowId: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val response = backendService.getWorkflowStatus(workflowId)
+
+            Log.d("TransactionlinkRepo", "Workflow status: ${response.status}")
+
+            Result.success(response.status)
         } catch (e: Exception) {
-            Log.e("TransactionlinkRepo", "Failed to extract token from link", e)
-            null
+            Log.e("TransactionlinkRepo", "Failed to get workflow status", e)
+            Result.failure(e)
         }
     }
 }

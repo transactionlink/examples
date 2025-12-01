@@ -28,6 +28,8 @@ Web client example implementations:
 
 ## mobile
 
-Mobile app example implementations:
+Mobile app example implementations that demonstrate secure integration by communicating with a backend server:
 * [mobile/android](mobile/android/README.md) - Android native app (Kotlin + Jetpack Compose)
 * [mobile/react-native-expo](mobile/react-native-expo/README.md) - React Native Expo app (iOS & Android)
+
+**IMPORTANT:** Mobile apps require a running backend server (see `server/` directory above). The backend handles API credentials securely - they are never exposed in mobile app code.
