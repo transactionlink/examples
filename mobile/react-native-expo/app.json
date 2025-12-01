@@ -1,0 +1,7 @@
+{
+  "name": "react-native-expo",
+  "slug": "react-native-expo",
+  "android": {
+    "package": "com.anonymous.reactnativeexpo"
+  }
+}
