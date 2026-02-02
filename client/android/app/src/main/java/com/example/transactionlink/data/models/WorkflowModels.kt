@@ -2,27 +2,25 @@ package com.example.transactionlink.data.models
 
 import com.google.gson.annotations.SerializedName
 
-data class WorkflowRequest(
-    @SerializedName("workflowDefinitionId")
-    val workflowDefinitionId: String,
-    @SerializedName("locale")
-    val locale: String,
-    @SerializedName("parameters")
-    val parameters: Map<String, Any> = emptyMap()
+/**
+ * Backend API response for workflow execution
+ * Contains the widget token and link from the backend server
+ */
+data class WorkflowExecutionResponse(
+    @SerializedName("link")
+    val link: String,
+    @SerializedName("token")
+    val token: String,
+    @SerializedName("workflowId")
+    val workflowId: String
 )
 
 /**
- * Workflow API response
- * Minimal model containing only fields actually used by the app:
- * - id: for logging workflow execution
- * - token: widget authentication token (fallback)
- * - link: URL containing token as query parameter (primary source)
+ * Backend API response for workflow status
  */
-data class WorkflowResponse(
-    @SerializedName("id")
-    val id: String,
-    @SerializedName("token")
-    val token: String,
-    @SerializedName("link")
-    val link: String
+data class WorkflowStatusResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("workflowId")
+    val workflowId: String
 )

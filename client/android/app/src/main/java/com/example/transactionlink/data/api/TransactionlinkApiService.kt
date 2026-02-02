@@ -1,23 +1,32 @@
 package com.example.transactionlink.data.api
 
-import com.example.transactionlink.data.models.AuthRequest
-import com.example.transactionlink.data.models.AuthResponse
-import com.example.transactionlink.data.models.WorkflowRequest
-import com.example.transactionlink.data.models.WorkflowResponse
+import com.example.transactionlink.data.models.WorkflowExecutionResponse
+import com.example.transactionlink.data.models.WorkflowStatusResponse
 import retrofit2.http.Body
-import retrofit2.http.Header
+import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 
-interface TransactionlinkApiService {
+/**
+ * Backend API service interface
+ * All endpoints communicate with the backend server which handles API secrets securely
+ */
+interface BackendApiService {
 
-    @POST("auth/authorize")
-    suspend fun authorize(
-        @Body authRequest: AuthRequest
-    ): AuthResponse
+    /**
+     * Create a workflow execution and get widget token
+     * The backend handles authentication and workflow creation
+     */
+    @POST("workflow-execution")
+    suspend fun createWorkflowExecution(
+        @Body parameters: Map<String, @JvmSuppressWildcards Any> = emptyMap()
+    ): WorkflowExecutionResponse
 
-    @POST("workflows")
-    suspend fun runWorkflow(
-        @Header("Authorization") authorization: String,
-        @Body workflowRequest: WorkflowRequest
-    ): WorkflowResponse
+    /**
+     * Get workflow status by ID
+     */
+    @GET("workflow-status")
+    suspend fun getWorkflowStatus(
+        @Query("workflowId") workflowId: String
+    ): WorkflowStatusResponse
 }
