@@ -10,5 +10,5 @@ To run the full end-to-end example, you also need to run the server-side part of
 
 In order to run the example:
 - make sure your backend server is running on port 8101,
-- run `npm install` to install dependencies and `npm dev` to start the server in the dev mode - it will serve React application from `client/react` folder on port 8100,
+- run `npm install` to install dependencies and `npm run dev` to start the server in the dev mode - it will serve React application from `client/react` folder on port 8100,
 - choose either hosted or embedded experience.
