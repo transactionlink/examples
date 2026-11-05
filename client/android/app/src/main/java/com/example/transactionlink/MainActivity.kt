@@ -1,9 +1,14 @@
 package com.example.transactionlink
 
+import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.view.ViewGroup
+import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -28,8 +33,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import com.example.transactionlink.data.repository.TransactionlinkRepository
 import com.example.transactionlink.ui.theme.TransactionlinkTheme
+
+// Maps what a web page asks for (getUserMedia video/audio) to the Android runtime permission it needs
+private val WEB_RESOURCE_TO_ANDROID_PERMISSION = mapOf(
+    PermissionRequest.RESOURCE_VIDEO_CAPTURE to Manifest.permission.CAMERA,
+    PermissionRequest.RESOURCE_AUDIO_CAPTURE to Manifest.permission.RECORD_AUDIO,
+)
+
+private fun hasPermission(context: Context, permission: String) =
+    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,6 +131,25 @@ fun WebViewContent(widgetToken: String) {
         }
     }
 
+    // Camera/microphone requests from the WebView waiting for the user's answer to the Android permission dialog.
+    // The widget and the KYC provider iframe (e.g. Veriff) can ask at the same time, so keep all of them:
+    // every request must end with grant() or deny(), otherwise getUserMedia in that frame never resolves.
+    val pendingWebPermissionRequests = remember { mutableListOf<PermissionRequest>() }
+
+    // Permission launcher for camera/microphone (runtime permissions, Android 6+)
+    val webPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { granted ->
+        pendingWebPermissionRequests.forEach { request ->
+            val grantedResources = request.resources.filter { resource ->
+                val androidPermission = WEB_RESOURCE_TO_ANDROID_PERMISSION[resource]
+                androidPermission != null && (granted[androidPermission] ?: hasPermission(context, androidPermission))
+            }
+            if (grantedResources.isEmpty()) request.deny() else request.grant(grantedResources.toTypedArray())
+        }
+        pendingWebPermissionRequests.clear()
+    }
+
     // File picker launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -163,9 +197,29 @@ fun WebViewContent(widgetToken: String) {
     AndroidView(
         factory = { context ->
             WebView(context).apply {
+                // WebView resolves CSS vh units to 0 when its LayoutParams height is WRAP_CONTENT (AndroidView default).
+                // The widget sizes camera steps with vh, so without MATCH_PARENT they render with 0 height.
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 webViewClient = WebViewClient()
 
                 webChromeClient = object : WebChromeClient() {
+                    // CRITICAL for camera integrations (Veriff, Au10tix, Ondato, GBG):
+                    // without this override WebView denies every getUserMedia call (NotAllowedError)
+                    // and the provider shows "Camera not detected".
+                    override fun onPermissionRequest(request: PermissionRequest) {
+                        val androidPermissions = request.resources.mapNotNull { WEB_RESOURCE_TO_ANDROID_PERMISSION[it] }
+                        if (androidPermissions.isEmpty()) {
+                            request.deny()
+                            return
+                        }
+                        if (androidPermissions.all { hasPermission(context, it) }) {
+                            request.grant(request.resources)
+                            return
+                        }
+                        pendingWebPermissionRequests += request
+                        webPermissionLauncher.launch(androidPermissions.toTypedArray())
+                    }
+
                     override fun onShowFileChooser(
                         webView: WebView?,
                         callback: ValueCallback<Array<Uri>>?,
@@ -207,6 +261,7 @@ fun WebViewContent(widgetToken: String) {
                 settings.apply {
                     javaScriptEnabled = true
                     domStorageEnabled = true
+                    mediaPlaybackRequiresUserGesture = false  // Camera preview is an autoplaying <video>
                     allowFileAccess = true  // Changed to true for file uploads
                     allowContentAccess = true  // Changed to true for file uploads
                     setSupportZoom(false)
