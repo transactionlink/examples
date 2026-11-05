@@ -98,6 +98,10 @@ export default function App() {
         allowFileAccessFromFileURLs={true}
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="always"
+        // Camera integrations (Veriff, Au10tix, Ondato, GBG): react-native-webview grants getUserMedia
+        // only when the app holds CAMERA and RECORD_AUDIO, so they are listed in app.json
+        // ("android.permissions"). The camera preview is an autoplaying <video>, hence:
+        mediaPlaybackRequiresUserAction={false}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           console.error('WebView error:', nativeEvent);

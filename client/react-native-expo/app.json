@@ -2,6 +2,11 @@
   "name": "react-native-expo",
   "slug": "react-native-expo",
   "android": {
-    "package": "com.anonymous.reactnativeexpo"
+    "package": "com.anonymous.reactnativeexpo",
+    "permissions": [
+      "android.permission.CAMERA",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.MODIFY_AUDIO_SETTINGS"
+    ]
   }
 }
