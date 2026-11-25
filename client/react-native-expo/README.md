@@ -119,6 +119,16 @@ The builds will be installed directly on your connected device or emulator.
 3. Backend creates a workflow and returns widget token to mobile app
 4. Mobile app loads the widget in a WebView using the token
 
+## Redirect back to the app
+
+A workflow can send the user back to the app with a **Redirect** task. Set the task address to the app's scheme, e.g. `tlexample://verification/finished`, and add query parameters from the workflow data.
+
+- The embedded widget does not leave the page. It sends the `redirect-requested` event with `{ url }`; the page passes it to the app with `window.ReactNativeWebView.postMessage`, and `onMessage` handles it.
+- If you load the hosted widget link in the WebView instead, the widget navigates the page to the address. `onShouldStartLoadWithRequest` catches the app scheme, because WebView cannot load it.
+- `handleRedirect` shows the app's own screen for `tlexample://` and opens any other address with `Linking.openURL`.
+
+Change `APP_REDIRECT_SCHEME` in `App.tsx` to your app's scheme.
+
 ## Testing E2E
 
 For end-to-end testing on actual devices:

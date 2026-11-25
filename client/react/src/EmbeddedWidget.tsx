@@ -36,6 +36,11 @@ function EmbeddedWidget() {
         if (!transactionLinkReady) {
             window.transactionlink_ready = async () => {
                 transactionLinkReady = true;
+                // The Redirect task of the workflow asks your page to go to an address.
+                // The embedded widget does not leave your page itself.
+                window.transactionlink!.on('redirect-requested', ({ url }: { url: string }) => {
+                    window.location.assign(url);
+                });
                 await openWidget(workflowId, token);
             };
 
