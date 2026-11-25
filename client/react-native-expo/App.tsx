@@ -1,12 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
+import type { WebViewMessageEvent } from 'react-native-webview';
+import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
 import { apiService } from './src/services/api';
+
+// Scheme of this app's own deep links. Use it as the address of the workflow's Redirect task,
+// e.g. tlexample://verification/finished with query parameters taken from the workflow data.
+const APP_REDIRECT_SCHEME = 'tlexample';
+
+const isAppRedirect = (url: string) => url.startsWith(`${APP_REDIRECT_SCHEME}:`);
 
 export default function App() {
   const [widgetToken, setWidgetToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [appRedirect, setAppRedirect] = useState<string | null>(null);
+
+  const handleRedirect = (url: string) => {
+    if (isAppRedirect(url)) {
+      setAppRedirect(url);
+      return;
+    }
+    Linking.openURL(url).catch((err) => console.warn(`No application can open ${url}`, err));
+  };
+
+  const onWidgetMessage = (event: WebViewMessageEvent) => {
+    const message = JSON.parse(event.nativeEvent.data);
+    if (message.type === 'redirect-requested') {
+      handleRedirect(message.url);
+    }
+  };
+
+  // When the app loads the hosted widget link instead of the embed below, the widget navigates
+  // the page itself. WebView cannot load app schemes, so hand our own scheme to handleRedirect.
+  const onShouldStartLoad = (request: ShouldStartLoadRequest) => {
+    if (!isAppRedirect(request.url)) {
+      return true;
+    }
+    handleRedirect(request.url);
+    return false;
+  };
 
   useEffect(() => {
     loadWidget();
@@ -25,6 +59,15 @@ export default function App() {
       setIsLoading(false);
     }
   };
+
+  if (appRedirect) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.loadingText}>Back in the app</Text>
+        <Text style={styles.errorText}>{appRedirect}</Text>
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -80,6 +123,10 @@ export default function App() {
               autoHeight: true
             });
             window.transactionlink.open();
+            // An embedded widget does not leave the page itself: it asks the page to go to the address.
+            window.transactionlink.on('redirect-requested', ({ url }) => {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'redirect-requested', url }));
+            });
           };
         </script>
         <script src="${widgetScriptUrl}?v=${timestamp}"></script>
@@ -92,6 +139,9 @@ export default function App() {
       <WebView
         source={{ html: htmlContent, baseUrl: widgetBaseUrl }}
         style={styles.webview}
+        onMessage={onWidgetMessage}
+        originWhitelist={['http://*', 'https://*', `${APP_REDIRECT_SCHEME}://*`]}
+        onShouldStartLoadWithRequest={onShouldStartLoad}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowFileAccess={true}

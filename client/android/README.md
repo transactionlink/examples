@@ -70,6 +70,22 @@ This example is built with:
 - Network security configuration for local development
 - Error handling and loading states
 
+## Redirect back to the app
+
+A workflow can send the user back to the app with a **Redirect** task.
+Set the task address to the app's scheme, e.g. `tlexample://verification/finished`, and add query
+parameters from the workflow data (e.g. `ref` = `#{welcome.ref}`).
+
+- The embedded widget (the page in `MainActivity`) does not leave the page. It sends the
+  `redirect-requested` event with `{ url }`; the page passes it to the app through the
+  `AndroidApp` JavaScript interface.
+- If you load the hosted widget link in the WebView instead, the widget navigates the page to the
+  address. `shouldOverrideUrlLoading` catches the app scheme, because WebView cannot load it.
+- `handleRedirect` shows the app's own screen for `tlexample://` and opens any other address
+  with the system.
+
+Change `APP_REDIRECT_SCHEME` in `MainActivity.kt` to your app's scheme.
+
 ## Running
 
 In order to run the example:
