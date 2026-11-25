@@ -72,7 +72,7 @@ This example is built with:
 
 ## Redirect back to the app
 
-A workflow can send the user back to the app with a **Redirect** task (engine `WORKFLOW_EXECUTOR`).
+A workflow can send the user back to the app with a **Redirect** task.
 Set the task address to the app's scheme, e.g. `tlexample://verification/finished`, and add query
 parameters from the workflow data (e.g. `ref` = `#{welcome.ref}`).
 
