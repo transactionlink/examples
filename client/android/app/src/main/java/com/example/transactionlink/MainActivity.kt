@@ -2,15 +2,21 @@ package com.example.transactionlink
 
 import android.Manifest
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
@@ -46,6 +52,33 @@ private val WEB_RESOURCE_TO_ANDROID_PERMISSION = mapOf(
 private fun hasPermission(context: Context, permission: String) =
     ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
+// Scheme of this app's own deep links. Use it as the address of the workflow's Redirect task,
+// e.g. tlexample://verification/finished with query parameters taken from the workflow data.
+const val APP_REDIRECT_SCHEME = "tlexample"
+
+private fun handleRedirect(context: Context, url: String, onAppRedirect: (Uri) -> Unit) {
+    val uri = Uri.parse(url)
+    if (uri.scheme == APP_REDIRECT_SCHEME) {
+        onAppRedirect(uri)
+        return
+    }
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+    } catch (e: ActivityNotFoundException) {
+        Log.w("TransactionlinkRedirect", "No application can open $url", e)
+    }
+}
+
+// WebView calls @JavascriptInterface methods on a background thread.
+private class RedirectBridge(private val onRedirect: (String) -> Unit) {
+    private val mainThread = Handler(Looper.getMainLooper())
+
+    @JavascriptInterface
+    fun onRedirectRequested(url: String) {
+        mainThread.post { onRedirect(url) }
+    }
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +97,7 @@ fun TransactionlinkWebView() {
     var widgetToken by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var finishedVerification by remember { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(Unit) {
         val result = repository.getWidgetToken()
@@ -80,6 +114,9 @@ fun TransactionlinkWebView() {
     }
 
     when {
+        finishedVerification != null -> {
+            VerificationFinished(finishedVerification!!)
+        }
         isLoading -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -97,13 +134,24 @@ fun TransactionlinkWebView() {
             }
         }
         widgetToken != null -> {
-            WebViewContent(widgetToken = widgetToken!!)
+            WebViewContent(widgetToken = widgetToken!!, onAppRedirect = { finishedVerification = it })
         }
     }
 }
 
 @Composable
-fun WebViewContent(widgetToken: String) {
+fun VerificationFinished(redirect: Uri) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        val parameters = redirect.queryParameterNames.joinToString("\n") { "$it: ${redirect.getQueryParameter(it)}" }
+        Text("Back in the app\n${redirect.host}${redirect.path}\n$parameters")
+    }
+}
+
+@Composable
+fun WebViewContent(widgetToken: String, onAppRedirect: (Uri) -> Unit) {
     val context = LocalContext.current
     val baseUrl = Config.WIDGET_BASE_URL
     val widgetScriptUrl = "$baseUrl/transactionlink-widget.umd.js"
@@ -187,6 +235,8 @@ fun WebViewContent(widgetToken: String) {
                   autoHeight: true
                 });
                 window.transactionlink.open();
+                // An embedded widget does not leave the page itself: it asks the page to go to the address.
+                window.transactionlink.on('redirect-requested', ({ url }) => AndroidApp.onRedirectRequested(url));
               };
             </script>
             <script src="$widgetScriptUrl?v=${System.currentTimeMillis()}"></script>
@@ -200,7 +250,17 @@ fun WebViewContent(widgetToken: String) {
                 // WebView resolves CSS vh units to 0 when its LayoutParams height is WRAP_CONTENT (AndroidView default).
                 // The widget sizes camera steps with vh, so without MATCH_PARENT they render with 0 height.
                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                webViewClient = WebViewClient()
+                addJavascriptInterface(RedirectBridge { handleRedirect(context, it, onAppRedirect) }, "AndroidApp")
+                webViewClient = object : WebViewClient() {
+                    // When the app loads the hosted widget link instead of the embed below, the widget
+                    // navigates the page itself. WebView cannot load app schemes, so hand them to handleRedirect.
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        val scheme = request.url.scheme
+                        if (scheme == "http" || scheme == "https") return false
+                        handleRedirect(context, request.url.toString(), onAppRedirect)
+                        return true
+                    }
+                }
 
                 webChromeClient = object : WebChromeClient() {
                     // CRITICAL for camera integrations (Veriff, Au10tix, Ondato, GBG):
